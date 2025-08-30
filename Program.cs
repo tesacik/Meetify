@@ -23,15 +23,14 @@ builder.Services.AddDefaultIdentity<IdentityUser>(options => options.SignIn.Requ
 builder.Services.AddRazorPages();
 builder.Services.AddServerSideBlazor();
 builder.Services.AddControllers();
-
-//builder.Services.AddScoped<AuthenticationStateProvider, RevalidatingIdentityAuthenticationStateProvider<IdentityUser>>();
 builder.Services.AddSingleton<WeatherForecastService>();
 
 // Auth
 builder.Services
 	.AddAuthentication(options =>
 	{
-		options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+		options.DefaultAuthenticateScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+		options.DefaultSignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
 		options.DefaultChallengeScheme = GoogleDefaults.AuthenticationScheme;
 	})
 	.AddCookie(options =>
@@ -44,9 +43,8 @@ builder.Services
 	{
 		options.ClientId = builder.Configuration["Authentication:Google:ClientId"]!;
 		options.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"]!;
-		options.Scope.Add("email");   // belt & suspenders; email is usually included
-		options.SaveTokens = true;    // handy if you’ll call Google APIs later
-		// options.CallbackPath = "/signin-google"; // default; uncomment only if you change it
+		options.Scope.Add("email");
+		options.SaveTokens = true;
 	});
 builder.Services.AddAuthorization();
 
