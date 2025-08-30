@@ -16,8 +16,8 @@ public partial class Index
 	[Inject]
 	private NavigationManager Nav { get; set; } = default!;
 
-	[Inject]
-	private ApplicationDbContext Db { get; set; } = default!;
+        [Inject]
+        private IDbContextFactory<ApplicationDbContext> DbFactory { get; set; } = default!;
 
 	[CascadingParameter]
 	private Task<AuthenticationState> AuthTask { get; set; } = default!;
@@ -34,10 +34,11 @@ public partial class Index
 
 		if (userEmail is null) return;
 
-		var link = new ShareLink { OwnerUserId = userEmail };
+                var link = new ShareLink { OwnerUserId = userEmail };
 
-		Db.ShareLinks.Add(link);
-		await Db.SaveChangesAsync();
+                await using var db = await DbFactory.CreateDbContextAsync();
+                db.ShareLinks.Add(link);
+                await db.SaveChangesAsync();
 
 		_newLink = Nav.BaseUri.TrimEnd('/') + $"/s/{link.Id}";
 	}

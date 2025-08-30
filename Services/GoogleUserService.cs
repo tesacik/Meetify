@@ -6,25 +6,27 @@ namespace Meetify.Services;
 
 public class GoogleUserService
 {
-	private readonly ApplicationDbContext _db;
+        private readonly IDbContextFactory<ApplicationDbContext> _dbFactory;
 
-	public GoogleUserService(ApplicationDbContext db) => _db = db;
+        public GoogleUserService(IDbContextFactory<ApplicationDbContext> dbFactory) => _dbFactory = dbFactory;
 
 	public async Task<GoogleUser?> GetByEmailAsync(string email, CancellationToken ct = default)
 	{
-		var norm = Normalize(email);
-		return await _db.GoogleUsers.AsNoTracking()
-			.FirstOrDefaultAsync(x => x.Email == norm, ct);
+                await using var db = await _dbFactory.CreateDbContextAsync();
+                var norm = Normalize(email);
+                return await db.GoogleUsers.AsNoTracking()
+                        .FirstOrDefaultAsync(x => x.Email == norm, ct);
 	}
 
 	public async Task<GoogleUser> UpsertFromClaimsAsync(
 		string email, string? firstName, string? lastName, string? identityUserId = null,
 		CancellationToken ct = default)
 	{
-		var norm = Normalize(email);
+                await using var db = await _dbFactory.CreateDbContextAsync();
+                var norm = Normalize(email);
 
-		var entity = await _db.GoogleUsers
-			.FirstOrDefaultAsync(x => x.Email == norm, ct);
+                var entity = await db.GoogleUsers
+                        .FirstOrDefaultAsync(x => x.Email == norm, ct);
 
 		if (entity is null)
 		{
@@ -37,7 +39,7 @@ public class GoogleUserService
 				CreatedUtc = DateTime.UtcNow,
 				UpdatedUtc = DateTime.UtcNow
 			};
-			_db.GoogleUsers.Add(entity);
+                        db.GoogleUsers.Add(entity);
 		}
 		else
 		{
@@ -49,7 +51,7 @@ public class GoogleUserService
 			entity.UpdatedUtc = DateTime.UtcNow;
 		}
 
-		await _db.SaveChangesAsync(ct);
+                await db.SaveChangesAsync(ct);
 		return entity;
 	}
 

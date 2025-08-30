@@ -34,11 +34,8 @@ public partial class Schedule
 	[Inject]
 	private NavigationManager Nav { get; set; } = default!;
 
-	[Inject]
-	private ApplicationDbContext Db { get; set; } = default!;
-
-	[Inject]
-	private Services.SlotService Slots { get; set; } = default!;
+        [Inject]
+        private Services.SlotService Slots { get; set; } = default!;
 
 	[Inject] 
 	private IDbContextFactory<ApplicationDbContext> DbFactory { get; set; } = default!;
@@ -54,10 +51,11 @@ public partial class Schedule
 		return base.OnInitializedAsync();
 	}
 
-	protected override async Task OnParametersSetAsync()
-	{
-		_link = await Db.ShareLinks.FindAsync(Id);
-		if (_link is null) { _message = "Odkaz je neplatný."; return; }
+        protected override async Task OnParametersSetAsync()
+        {
+                await using var db = await DbFactory.CreateDbContextAsync();
+                _link = await db.ShareLinks.FindAsync(Id);
+                if (_link is null) { _message = "Odkaz je neplatný."; return; }
 
 		_linkOwner = _link.OwnerUserId;
 		if (_linkOwner is null) { _message = "Kalendář nenalezen."; return; }
