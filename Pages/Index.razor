@@ -2,8 +2,25 @@
 
 <PageTitle>Index</PageTitle>
 
-<h1>Hello, world!</h1>
 
-Welcome to your new app.
+<AuthorizeView Context="auth">
+    <Authorized>
+        <p>Signed in as <b>@auth.User.Identity?.Name</b></p>
+        <p>Email: <b>@(auth.User.FindFirst("email")?.Value ?? auth.User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value)</b></p>
+        <a class="btn btn-outline-danger" href="/auth/logout">Logout</a>
 
-<SurveyPrompt Title="How is Blazor working for you?" />
+        <SurveyPrompt Title="How is Blazor working for you?" />
+    </Authorized>
+    <NotAuthorized>
+            <div class="container">
+                <div class="row">
+                    <h1>Please, sign in ...</h1>
+                </div>
+                <div class="row">
+                    <a class="btn btn-primary" href="/auth/login?returnUrl=%2Fsecure">Login with Google</a>
+                </div>
+            </div>
+    </NotAuthorized>
+</AuthorizeView>
+
+

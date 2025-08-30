@@ -1,0 +1,20 @@
+﻿@page "/secure"
+
+<AuthorizeView Context="auth">
+    <Authorized>
+        <PageTitle>Index</PageTitle>
+
+        <h1>You are on signed in!</h1>
+
+        <p>Signed in as <b>@auth.User.Identity?.Name</b></p>
+        <p>Email: <b>@(auth.User.FindFirst("email")?.Value ?? auth.User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value)</b></p>
+        <a class="btn btn-outline-danger" href="/auth/logout">Logout</a>
+    </Authorized>
+    <NotAuthorized>
+        <p>You are not signed in.</p>
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+
+}
