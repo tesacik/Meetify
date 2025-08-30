@@ -1,5 +1,6 @@
 using Meetify.Areas.Identity;
 using Meetify.Data;
+using Meetify.Services;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Components;
@@ -23,6 +24,8 @@ builder.Services.AddDefaultIdentity<IdentityUser>(options => options.SignIn.Requ
 builder.Services.AddRazorPages();
 builder.Services.AddServerSideBlazor();
 builder.Services.AddControllers();
+
+builder.Services.AddScoped<SlotService>();
 builder.Services.AddSingleton<WeatherForecastService>();
 
 // Auth

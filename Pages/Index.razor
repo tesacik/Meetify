@@ -1,15 +1,31 @@
 ﻿@page "/"
+@inject AuthenticationStateProvider AuthenticationStateProvider
 
 <PageTitle>Index</PageTitle>
 
-
 <AuthorizeView Context="auth">
     <Authorized>
-        <p>Signed in as <b>@auth.User.Identity?.Name</b></p>
-        <p>Email: <b>@(auth.User.FindFirst("email")?.Value ?? auth.User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value)</b></p>
-        <a class="btn btn-outline-danger" href="/auth/logout">Logout</a>
+        <div class="container">
+            <div class="row">
+                <p>Signed in as <b>@auth.User.Identity?.Name</b></p>
+                <p>Email: <b>@(auth.User.FindFirst("email")?.Value ?? auth.User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value)</b></p>
 
-        <SurveyPrompt Title="How is Blazor working for you?" />
+                <div class="">
+                    <button class="btn btn-primary" @onclick="GenerateLink">Vygenerovat odkaz</button>
+                    <a class="btn btn-outline-danger" href="/auth/logout">Logout</a>
+                </div>
+
+                <div class="">
+                    @if (!string.IsNullOrEmpty(_newLink))
+                    {
+                        <div class="alert alert-success mt-3">
+                            Sdílejte tento odkaz (platí pro sjednání jedné schůzky):<br />
+                            <code>@_newLink</code>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
     </Authorized>
     <NotAuthorized>
             <div class="container">
@@ -17,7 +33,7 @@
                     <h1>Please, sign in ...</h1>
                 </div>
                 <div class="row">
-                    <a class="btn btn-primary" href="/auth/login?returnUrl=%2Fsecure">Login with Google</a>
+                    <a class="btn btn-primary" href="/auth/login?returnUrl=%2F">Login with Google</a>
                 </div>
             </div>
     </NotAuthorized>
