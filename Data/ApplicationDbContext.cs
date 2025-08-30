@@ -8,6 +8,7 @@ public class ApplicationDbContext : IdentityDbContext
 {
 	public DbSet<ShareLink> ShareLinks => Set<ShareLink>();
 	public DbSet<Appointment> Appointments => Set<Appointment>();
+	public DbSet<GoogleUser> GoogleUsers => Set<GoogleUser>();
 
 	public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
         : base(options)
@@ -21,5 +22,13 @@ public class ApplicationDbContext : IdentityDbContext
 		builder.Entity<Appointment>()
 			.HasIndex(a => new { a.OwnerUserId, a.StartUtc })
 			.IsUnique();
+
+		builder.Entity<GoogleUser>(cfg =>
+		{
+			cfg.HasIndex(x => x.Email).IsUnique();
+			cfg.Property(x => x.Email).IsRequired().HasMaxLength(450);
+			cfg.Property(x => x.FirstName).HasMaxLength(100);
+			cfg.Property(x => x.LastName).HasMaxLength(100);
+		});
 	}
 }

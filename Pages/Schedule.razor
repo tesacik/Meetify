@@ -1,0 +1,94 @@
+﻿@page "/s/{Id:guid}"
+@using Meetify.Components
+
+@if (!string.IsNullOrEmpty(_message))
+{
+    <div class="alert alert-info">@_message</div>
+}
+
+@if (_link is not null && _linkOwner is not null)
+{
+    <h1 class="mb-3">@OwnerLabel()</h1>
+    <h2 class="mb-4">Počet schůzek v tomto měsíci: @_appointmentsCount</h2>
+
+    <CalendarMonth Month="_currentMonth"
+                   OwnerUserId="_link.OwnerUserId"
+                   IsPublicView="true"
+                   OnDayClick="OpenDay" />
+}
+
+@if (_showModal)
+{
+    <!-- Bootstrap 5.1 modal -->
+    <div class="modal fade show d-block" tabindex="-1" style="background:rgba(0,0,0,.5)">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Vyberte termín – @_selectedDay.ToString("dd.MM.yyyy")</h5>
+                    <button type="button" class="btn-close" @onclick="(() => _showModal = false)"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Délka schůzky</label>
+                        <select class="form-select" @bind="_duration" @bind:after="ReloadSlots">
+                            <option value="30">30 min</option>
+                            <option value="45">45 min</option>
+                            <option value="60">1 hod</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Dostupné časy</label>
+                        @if (_slots.Count == 0)
+                        {
+                            <div class="text-muted">Žádné termíny.</div>
+                        }
+                        else
+                        {
+                            foreach (var s in _slots)
+                            {
+                                var id = $"opt-{s.from:HHmm}";
+                                <div class="form-check">
+                                    <input class="form-check-input"
+                                           type="radio"
+                                           name="slot"
+                                           id="@id"
+                                           disabled="@( !s.available )"
+                                           @onclick="(() => _selectedFrom = s.available ? s.from : null)" />
+                                    <label class="form-check-label" for="@id">
+                                        @s.from.ToString("H:mm")-@s.to.ToString("H:mm")
+                                        @if (!s.available)
+                                        {
+                                            <span class="text-muted"> (@s.reason)</span>
+                                        }
+                                    </label>
+                                </div>
+                            }
+                        }
+                    </div>
+
+                    <div class="row g-2">
+                        <div class="col">
+                            <input class="form-control" placeholder="Jméno" @bind="_guestFirst" />
+                        </div>
+                        <div class="col">
+                            <input class="form-control" placeholder="Příjmení" @bind="_guestLast" />
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="(() => _showModal = false)">Zavřít</button>
+                    <button class="btn btn-primary"
+                            @onclick="Book"
+                            disabled="@(string.IsNullOrWhiteSpace(_guestFirst) || string.IsNullOrWhiteSpace(_guestLast) || _selectedFrom is null)">
+                        Rezervovat
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+
+}

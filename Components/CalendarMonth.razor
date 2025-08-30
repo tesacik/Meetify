@@ -1,0 +1,74 @@
+﻿@using Microsoft.AspNetCore.Identity
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div class="btn-group" role="group" aria-label="Month navigation">
+        <button class="btn btn-sm btn-outline-secondary" @onclick="PrevMonth" title="Předchozí měsíc">‹</button>
+        <button class="btn btn-sm btn-outline-secondary" @onclick="NextMonth" title="Další měsíc">›</button>
+    </div>
+    <h5 class="mb-0 text-capitalize">
+        @Month.ToDateTime(new(1, 0)).ToString("MMMM yyyy", _csCulture)
+    </h5>
+    <div></div>
+</div>
+
+<div class="table-responsive">
+    <table class="table table-bordered align-middle mb-0 calendar">
+        <thead class="table-light">
+            <tr class="text-center">
+                @foreach (var dayName in _dayNames)
+                {
+                    <th scope="col" class="fw-semibold">@dayName</th>
+                }
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var week in _weeks)
+            {
+                <tr>
+                    @foreach (var day in week)
+                    {
+                        var isCurrentMonth = (day.Month == Month.Month);
+                        var clickable = IsClickable(day);
+                        var muted = !isCurrentMonth;
+
+                        <td class="@($"p-2 {(!isCurrentMonth ? "bg-light" : "")}")"
+                            style="height: 110px; vertical-align: top; cursor:@(clickable ? "pointer" : "default")"
+                            @onclick="(() => OnDayClickInternal(day))">
+
+                            <div class="d-flex justify-content-between align-items-center">
+                                <small class="@($"text-muted {(muted ? "opacity-75" : "")}")">
+                                    @day.Day.@day.Month.
+                                </small>
+                                @if (Services.SlotService.IsWeekendOrHoliday(day))
+                                {
+                                    <span class="badge bg-secondary">volno</span>
+                                }
+                            </div>
+
+                            @if (isCurrentMonth && _eventsByDay.TryGetValue(day, out var eventsForDay))
+                            {
+                                <div class="mt-1 d-grid gap-1">
+                                    @foreach (var ev in eventsForDay)
+                                    {
+                                        if (IsPublicView)
+                                        {
+                                            <span class="badge bg-secondary text-truncate" title="Obsazeno">
+                                                Obsazeno
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-primary text-truncate" title="@ev.text">
+                                                @ev.text
+                                            </span>
+                                        }
+                                    }
+                                </div>
+                            }
+                        </td>
+                    }
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

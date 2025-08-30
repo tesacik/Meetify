@@ -32,7 +32,7 @@ public partial class Index
 		var userEmail = user.FindFirst("email")?.Value
 		  ?? user.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value;
 
-		if (user is null) return;
+		if (userEmail is null) return;
 
 		var link = new ShareLink { OwnerUserId = userEmail };
 

@@ -9,14 +9,18 @@ using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI;
 using Microsoft.EntityFrameworkCore;
+using System;
+using System.Security.Claims;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(connectionString));
+//builder.Services.AddDbContext<ApplicationDbContext>(options =>
+//    options.UseSqlServer(connectionString));
+builder.Services.AddDbContextFactory<ApplicationDbContext>(opt =>
+	opt.UseSqlServer(connectionString));
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 builder.Services.AddDefaultIdentity<IdentityUser>(options => options.SignIn.RequireConfirmedAccount = true)
     .AddEntityFrameworkStores<ApplicationDbContext>();
@@ -26,6 +30,7 @@ builder.Services.AddServerSideBlazor();
 builder.Services.AddControllers();
 
 builder.Services.AddScoped<SlotService>();
+builder.Services.AddScoped<GoogleUserService>();
 builder.Services.AddSingleton<WeatherForecastService>();
 
 // Auth
@@ -48,6 +53,21 @@ builder.Services
 		options.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"]!;
 		options.Scope.Add("email");
 		options.SaveTokens = true;
+		options.Events.OnCreatingTicket = async ctx =>
+		{
+			var email = ctx.Principal?.FindFirst(ClaimTypes.Email)?.Value
+				?? ctx.Principal?.FindFirst("email")?.Value;
+			var given = ctx.Principal?.FindFirst(ClaimTypes.GivenName)?.Value
+				?? (ctx.User.TryGetProperty("given_name", out var g) ? g.GetString() : null);
+			var family = ctx.Principal?.FindFirst(ClaimTypes.Surname)?.Value
+				?? (ctx.User.TryGetProperty("family_name", out var f) ? f.GetString() : null);
+
+			if (!string.IsNullOrWhiteSpace(email))
+			{
+				var svc = ctx.HttpContext.RequestServices.GetRequiredService<GoogleUserService>();
+				await svc.UpsertFromClaimsAsync(email!, given, family);
+			}
+		};
 	});
 builder.Services.AddAuthorization();
 
