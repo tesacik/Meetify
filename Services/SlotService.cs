@@ -1,18 +1,17 @@
 ﻿using Meetify.Data;
 using Meetify.Domain;
 using Microsoft.EntityFrameworkCore;
-using System;
 
 namespace Meetify.Services;
 
 public class SlotService
 {
-	private readonly ApplicationDbContext _db;
+	private readonly IDbContextFactory<ApplicationDbContext> _dbFactory;
 	private readonly TimeZoneInfo _tz; // Europe/Prague
 
-	public SlotService(ApplicationDbContext db)
+	public SlotService(IDbContextFactory<ApplicationDbContext> dbFactory)
 	{
-		_db = db;
+		_dbFactory = dbFactory;
 		_tz = TimeZoneInfo.FindSystemTimeZoneById("Central Europe Standard Time"); // Windows ID pro Prahu
 	}
 
@@ -21,25 +20,33 @@ public class SlotService
 
 	public async Task<int> CountAppointmentsInMonthAsync(string ownerUserId, DateOnly month)
 	{
+		await using var db = await _dbFactory.CreateDbContextAsync();
 		var start = month.ToDateTime(new(1, 0, 0), DateTimeKind.Unspecified);
 		var end = start.AddMonths(1);
-		return await _db.Appointments
-			.Where(a => a.OwnerUserId == ownerUserId && a.StartUtc >= start && a.StartUtc < end)
-			.CountAsync();
+		return await db.Appointments
+				.Where(a => a.OwnerUserId == ownerUserId && a.StartUtc >= start && a.StartUtc < end)
+				.CountAsync();
 	}
 
 	public async Task<List<(DateTime startUtc, DateTime endUtc)>> GetExistingForDayAsync(string ownerUserId, DateOnly day)
+	{
+		await using var db = await _dbFactory.CreateDbContextAsync();
+		return await GetExistingForDayInternalAsync(db, ownerUserId, day);
+	}
+
+	private async Task<List<(DateTime startUtc, DateTime endUtc)>> GetExistingForDayInternalAsync(
+			ApplicationDbContext db, string ownerUserId, DateOnly day)
 	{
 		var dayStartLocal = day.ToDateTime(TimeOnly.MinValue, DateTimeKind.Unspecified);
 		var dayEndLocal = dayStartLocal.AddDays(1);
 		var startUtc = TimeZoneInfo.ConvertTimeToUtc(dayStartLocal, _tz);
 		var endUtc = TimeZoneInfo.ConvertTimeToUtc(dayEndLocal, _tz);
 
-		return await _db.Appointments
-			.Where(a => a.OwnerUserId == ownerUserId && a.StartUtc >= startUtc && a.StartUtc < endUtc)
-			.OrderBy(a => a.StartUtc)
-			.Select(a => new ValueTuple<DateTime, DateTime>(a.StartUtc, a.EndUtc))
-			.ToListAsync();
+		return await db.Appointments
+				.Where(a => a.OwnerUserId == ownerUserId && a.StartUtc >= startUtc && a.StartUtc < endUtc)
+				.OrderBy(a => a.StartUtc)
+				.Select(a => new ValueTuple<DateTime, DateTime>(a.StartUtc, a.EndUtc))
+				.ToListAsync();
 	}
 
 	public IEnumerable<TimeOnly> GenerateStartTimes(TimeSpan duration)
@@ -58,7 +65,7 @@ public class SlotService
 		return false;
 	}
 
-	public static bool IsWithinWindow(DateOnly d, DateOnly today) => 
+	public static bool IsWithinWindow(DateOnly d, DateOnly today) =>
 		d > today && d <= today.AddMonths(2);
 
 	public static bool RespectsDailyLimit(IEnumerable<(DateTime s, DateTime e)> existing) => existing.Count() < 3;
@@ -90,8 +97,8 @@ public class SlotService
 		}
 
 		var existing = (await GetExistingForDayAsync(ownerUserId, day))
-			.Select(x => (s: x.startUtc, e: x.endUtc))
-			.ToList();
+				.Select(x => (s: x.startUtc, e: x.endUtc))
+				.ToList();
 		var dailyOk = RespectsDailyLimit(existing);
 
 		foreach (var start in GenerateStartTimes(duration))
@@ -117,8 +124,10 @@ public class SlotService
 		string guestFirst,
 		string guestLast)
 	{
+		await using var db = await _dbFactory.CreateDbContextAsync();
+
 		// Zkontrolovat odkaz
-		var link = await _db.ShareLinks.FirstOrDefaultAsync(l => l.Id == linkId && l.OwnerUserId == ownerUserId);
+		var link = await db.ShareLinks.FirstOrDefaultAsync(l => l.Id == linkId && l.OwnerUserId == ownerUserId);
 		if (link is null) return (false, "Neplatný odkaz.");
 		if (link.IsUsed) return (false, "Tento odkaz už byl použit pro sjednání jedné schůzky.");
 
@@ -132,15 +141,15 @@ public class SlotService
 		var endUtc = TimeZoneInfo.ConvertTimeToUtc(localEnd, _tz);
 
 		// Re-validace proti aktuálním datům v DB v transakci
-		using var tx = await _db.Database.BeginTransactionAsync();
+		await using var tx = await db.Database.BeginTransactionAsync();
 
-		var existing = await GetExistingForDayAsync(ownerUserId, day);
+		var existing = await GetExistingForDayInternalAsync(db, ownerUserId, day);
 		if (!RespectsDailyLimit(existing.Select(x => (x.startUtc, x.endUtc))))
 			return (false, "Na tento den je již maximum 3 schůzek.");
 		if (!FitsWithBuffer(startUtc, endUtc, existing.Select(x => (x.startUtc, x.endUtc))))
 			return (false, "Termín koliduje s jinou schůzkou nebo povinnou pauzou.");
 
-		_db.Appointments.Add(new Appointment
+		db.Appointments.Add(new Appointment
 		{
 			OwnerUserId = ownerUserId,
 			StartUtc = startUtc,
@@ -154,7 +163,7 @@ public class SlotService
 
 		try
 		{
-			await _db.SaveChangesAsync();
+			await db.SaveChangesAsync();
 			await tx.CommitAsync();
 			return (true, null);
 		}
