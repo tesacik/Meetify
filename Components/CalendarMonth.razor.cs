@@ -15,8 +15,8 @@ public partial class CalendarMonth
 	[Inject]
 	private NavigationManager Nav { get; set; } = default!;
 
-        [Inject]
-        private IDbContextFactory<ApplicationDbContext> DbFactory { get; set; } = default!;
+	[Inject]
+	private IDbContextFactory<ApplicationDbContext> DbFactory { get; set; } = default!;
 
 	[Inject]
 	private Services.SlotService Slots { get; set; } = default!;
@@ -63,17 +63,17 @@ public partial class CalendarMonth
 	{
 		_eventsByDay.Clear();
 
-                var rangeStart = Month.ToDateTime(new TimeOnly(0, 0), DateTimeKind.Local);
-                var rangeEnd = rangeStart.AddMonths(1);
+		var rangeStart = Month.ToDateTime(new TimeOnly(0, 0), DateTimeKind.Local);
+		var rangeEnd = rangeStart.AddMonths(1);
 
-                await using var db = await DbFactory.CreateDbContextAsync();
+		await using var db = await DbFactory.CreateDbContextAsync();
 
-                var apps = await db.Appointments
-                        .Where(a => a.OwnerUserId == OwnerUserId &&
-                                                a.StartUtc >= rangeStart.ToUniversalTime() &&
-                                                a.StartUtc < rangeEnd.ToUniversalTime())
-                        .OrderBy(a => a.StartUtc)
-                        .ToListAsync();
+		var apps = await db.Appointments
+				.Where(a => a.OwnerUserId == OwnerUserId &&
+					a.StartUtc >= rangeStart.ToUniversalTime() &&
+					a.StartUtc < rangeEnd.ToUniversalTime())
+				.OrderBy(a => a.StartUtc)
+				.ToListAsync();
 
 		foreach (var a in apps)
 		{

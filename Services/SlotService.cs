@@ -1,54 +1,53 @@
 ﻿using Meetify.Data;
 using Meetify.Domain;
 using Microsoft.EntityFrameworkCore;
-using System;
 
 namespace Meetify.Services;
 
 public class SlotService
 {
-        private readonly IDbContextFactory<ApplicationDbContext> _dbFactory;
-        private readonly TimeZoneInfo _tz; // Europe/Prague
+	private readonly IDbContextFactory<ApplicationDbContext> _dbFactory;
+	private readonly TimeZoneInfo _tz; // Europe/Prague
 
-        public SlotService(IDbContextFactory<ApplicationDbContext> dbFactory)
-        {
-                _dbFactory = dbFactory;
-                _tz = TimeZoneInfo.FindSystemTimeZoneById("Central Europe Standard Time"); // Windows ID pro Prahu
-        }
+	public SlotService(IDbContextFactory<ApplicationDbContext> dbFactory)
+	{
+		_dbFactory = dbFactory;
+		_tz = TimeZoneInfo.FindSystemTimeZoneById("Central Europe Standard Time"); // Windows ID pro Prahu
+	}
 
 	public static readonly TimeSpan DayStart = new(9, 0, 0);
 	public static readonly TimeSpan DayEnd = new(16, 0, 0);
 
-        public async Task<int> CountAppointmentsInMonthAsync(string ownerUserId, DateOnly month)
-        {
-                await using var db = await _dbFactory.CreateDbContextAsync();
-                var start = month.ToDateTime(new(1, 0, 0), DateTimeKind.Unspecified);
-                var end = start.AddMonths(1);
-                return await db.Appointments
-                        .Where(a => a.OwnerUserId == ownerUserId && a.StartUtc >= start && a.StartUtc < end)
-                        .CountAsync();
-        }
+	public async Task<int> CountAppointmentsInMonthAsync(string ownerUserId, DateOnly month)
+	{
+		await using var db = await _dbFactory.CreateDbContextAsync();
+		var start = month.ToDateTime(new(1, 0, 0), DateTimeKind.Unspecified);
+		var end = start.AddMonths(1);
+		return await db.Appointments
+				.Where(a => a.OwnerUserId == ownerUserId && a.StartUtc >= start && a.StartUtc < end)
+				.CountAsync();
+	}
 
-        public async Task<List<(DateTime startUtc, DateTime endUtc)>> GetExistingForDayAsync(string ownerUserId, DateOnly day)
-        {
-                await using var db = await _dbFactory.CreateDbContextAsync();
-                return await GetExistingForDayInternalAsync(db, ownerUserId, day);
-        }
+	public async Task<List<(DateTime startUtc, DateTime endUtc)>> GetExistingForDayAsync(string ownerUserId, DateOnly day)
+	{
+		await using var db = await _dbFactory.CreateDbContextAsync();
+		return await GetExistingForDayInternalAsync(db, ownerUserId, day);
+	}
 
-        private async Task<List<(DateTime startUtc, DateTime endUtc)>> GetExistingForDayInternalAsync(
-                ApplicationDbContext db, string ownerUserId, DateOnly day)
-        {
-                var dayStartLocal = day.ToDateTime(TimeOnly.MinValue, DateTimeKind.Unspecified);
-                var dayEndLocal = dayStartLocal.AddDays(1);
-                var startUtc = TimeZoneInfo.ConvertTimeToUtc(dayStartLocal, _tz);
-                var endUtc = TimeZoneInfo.ConvertTimeToUtc(dayEndLocal, _tz);
+	private async Task<List<(DateTime startUtc, DateTime endUtc)>> GetExistingForDayInternalAsync(
+			ApplicationDbContext db, string ownerUserId, DateOnly day)
+	{
+		var dayStartLocal = day.ToDateTime(TimeOnly.MinValue, DateTimeKind.Unspecified);
+		var dayEndLocal = dayStartLocal.AddDays(1);
+		var startUtc = TimeZoneInfo.ConvertTimeToUtc(dayStartLocal, _tz);
+		var endUtc = TimeZoneInfo.ConvertTimeToUtc(dayEndLocal, _tz);
 
-                return await db.Appointments
-                        .Where(a => a.OwnerUserId == ownerUserId && a.StartUtc >= startUtc && a.StartUtc < endUtc)
-                        .OrderBy(a => a.StartUtc)
-                        .Select(a => new ValueTuple<DateTime, DateTime>(a.StartUtc, a.EndUtc))
-                        .ToListAsync();
-        }
+		return await db.Appointments
+				.Where(a => a.OwnerUserId == ownerUserId && a.StartUtc >= startUtc && a.StartUtc < endUtc)
+				.OrderBy(a => a.StartUtc)
+				.Select(a => new ValueTuple<DateTime, DateTime>(a.StartUtc, a.EndUtc))
+				.ToListAsync();
+	}
 
 	public IEnumerable<TimeOnly> GenerateStartTimes(TimeSpan duration)
 	{
@@ -66,7 +65,7 @@ public class SlotService
 		return false;
 	}
 
-	public static bool IsWithinWindow(DateOnly d, DateOnly today) => 
+	public static bool IsWithinWindow(DateOnly d, DateOnly today) =>
 		d > today && d <= today.AddMonths(2);
 
 	public static bool RespectsDailyLimit(IEnumerable<(DateTime s, DateTime e)> existing) => existing.Count() < 3;
@@ -97,9 +96,9 @@ public class SlotService
 			return list;
 		}
 
-                var existing = (await GetExistingForDayAsync(ownerUserId, day))
-                        .Select(x => (s: x.startUtc, e: x.endUtc))
-                        .ToList();
+		var existing = (await GetExistingForDayAsync(ownerUserId, day))
+				.Select(x => (s: x.startUtc, e: x.endUtc))
+				.ToList();
 		var dailyOk = RespectsDailyLimit(existing);
 
 		foreach (var start in GenerateStartTimes(duration))
@@ -125,12 +124,12 @@ public class SlotService
 		string guestFirst,
 		string guestLast)
 	{
-                await using var db = await _dbFactory.CreateDbContextAsync();
+		await using var db = await _dbFactory.CreateDbContextAsync();
 
-                // Zkontrolovat odkaz
-                var link = await db.ShareLinks.FirstOrDefaultAsync(l => l.Id == linkId && l.OwnerUserId == ownerUserId);
-                if (link is null) return (false, "Neplatný odkaz.");
-                if (link.IsUsed) return (false, "Tento odkaz už byl použit pro sjednání jedné schůzky.");
+		// Zkontrolovat odkaz
+		var link = await db.ShareLinks.FirstOrDefaultAsync(l => l.Id == linkId && l.OwnerUserId == ownerUserId);
+		if (link is null) return (false, "Neplatný odkaz.");
+		if (link.IsUsed) return (false, "Tento odkaz už byl použit pro sjednání jedné schůzky.");
 
 		var today = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(DateTime.UtcNow, _tz).Date);
 		if (!IsWithinWindow(day, today) || IsWeekendOrHoliday(day))
@@ -141,33 +140,33 @@ public class SlotService
 		var startUtc = TimeZoneInfo.ConvertTimeToUtc(localStart, _tz);
 		var endUtc = TimeZoneInfo.ConvertTimeToUtc(localEnd, _tz);
 
-                // Re-validace proti aktuálním datům v DB v transakci
-                await using var tx = await db.Database.BeginTransactionAsync();
+		// Re-validace proti aktuálním datům v DB v transakci
+		await using var tx = await db.Database.BeginTransactionAsync();
 
-                var existing = await GetExistingForDayInternalAsync(db, ownerUserId, day);
-                if (!RespectsDailyLimit(existing.Select(x => (x.startUtc, x.endUtc))))
-                        return (false, "Na tento den je již maximum 3 schůzek.");
-                if (!FitsWithBuffer(startUtc, endUtc, existing.Select(x => (x.startUtc, x.endUtc))))
-                        return (false, "Termín koliduje s jinou schůzkou nebo povinnou pauzou.");
+		var existing = await GetExistingForDayInternalAsync(db, ownerUserId, day);
+		if (!RespectsDailyLimit(existing.Select(x => (x.startUtc, x.endUtc))))
+			return (false, "Na tento den je již maximum 3 schůzek.");
+		if (!FitsWithBuffer(startUtc, endUtc, existing.Select(x => (x.startUtc, x.endUtc))))
+			return (false, "Termín koliduje s jinou schůzkou nebo povinnou pauzou.");
 
-                db.Appointments.Add(new Appointment
-                {
-                        OwnerUserId = ownerUserId,
-                        StartUtc = startUtc,
-                        EndUtc = endUtc,
-                        GuestFirstName = guestFirst.Trim(),
-                        GuestLastName = guestLast.Trim()
-                });
+		db.Appointments.Add(new Appointment
+		{
+			OwnerUserId = ownerUserId,
+			StartUtc = startUtc,
+			EndUtc = endUtc,
+			GuestFirstName = guestFirst.Trim(),
+			GuestLastName = guestLast.Trim()
+		});
 
 		// zamknout odkaz (lze rezervovat pouze jednu schůzku tímto linkem)
-                link.IsUsed = true;
+		link.IsUsed = true;
 
-                try
-                {
-                        await db.SaveChangesAsync();
-                        await tx.CommitAsync();
-                        return (true, null);
-                }
+		try
+		{
+			await db.SaveChangesAsync();
+			await tx.CommitAsync();
+			return (true, null);
+		}
 		catch (DbUpdateException)
 		{
 			await tx.RollbackAsync();

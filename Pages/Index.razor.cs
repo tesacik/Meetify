@@ -3,6 +3,7 @@ using Meetify.Domain;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 
 namespace Meetify.Pages;
 
@@ -16,8 +17,8 @@ public partial class Index
 	[Inject]
 	private NavigationManager Nav { get; set; } = default!;
 
-        [Inject]
-        private IDbContextFactory<ApplicationDbContext> DbFactory { get; set; } = default!;
+	[Inject]
+	private IDbContextFactory<ApplicationDbContext> DbFactory { get; set; } = default!;
 
 	[CascadingParameter]
 	private Task<AuthenticationState> AuthTask { get; set; } = default!;
@@ -34,11 +35,11 @@ public partial class Index
 
 		if (userEmail is null) return;
 
-                var link = new ShareLink { OwnerUserId = userEmail };
+		var link = new ShareLink { OwnerUserId = userEmail };
 
-                await using var db = await DbFactory.CreateDbContextAsync();
-                db.ShareLinks.Add(link);
-                await db.SaveChangesAsync();
+		await using var db = await DbFactory.CreateDbContextAsync();
+		db.ShareLinks.Add(link);
+		await db.SaveChangesAsync();
 
 		_newLink = Nav.BaseUri.TrimEnd('/') + $"/s/{link.Id}";
 	}
