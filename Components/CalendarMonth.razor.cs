@@ -7,6 +7,15 @@ namespace Meetify.Components;
 
 public partial class CalendarMonth
 {
+	private readonly string[] _dayNames =
+		new[] { "Po", "Út", "St", "Čt", "Pá", "So", "Ne" };
+
+	private readonly System.Globalization.CultureInfo _csCulture =
+		System.Globalization.CultureInfo.GetCultureInfo("cs-CZ");
+
+	private List<List<DateOnly>> _weeks = new();
+	private Dictionary<DateOnly, List<(TimeOnly from, string text)>> _eventsByDay = new();
+
 	[Parameter] public DateOnly Month { get; set; }
 	[Parameter] public string OwnerUserId { get; set; } = default!;
 	[Parameter] public bool IsPublicView { get; set; }
@@ -21,15 +30,6 @@ public partial class CalendarMonth
 
 	[Inject]
 	private Services.SlotService Slots { get; set; } = default!;
-
-	private readonly string[] _dayNames =
-		new[] { "Po", "Út", "St", "Čt", "Pá", "So", "Ne" };
-
-	private readonly System.Globalization.CultureInfo _csCulture =
-		System.Globalization.CultureInfo.GetCultureInfo("cs-CZ");
-
-	private List<List<DateOnly>> _weeks = new();
-	private Dictionary<DateOnly, List<(TimeOnly from, string text)>> _eventsByDay = new();
 
 	protected override async Task OnParametersSetAsync()
 	{
@@ -63,7 +63,7 @@ public partial class CalendarMonth
 
 	private async Task LoadEvents()
 	{
-		_eventsByDay.Clear();
+		Dictionary<DateOnly, List<(TimeOnly from, string text)>> eventsByDay = new();
 
 		//var firstOfMonth = new DateOnly(Month.Year, Month.Month, 1);
 		var rangeStart = Month.ToDateTime(TimeOnly.MinValue, DateTimeKind.Local);
@@ -84,15 +84,17 @@ public partial class CalendarMonth
 			var localEnd = a.EndUtc.ToLocalTime();
 			var day = DateOnly.FromDateTime(localStart);
 
-			if (!_eventsByDay.TryGetValue(day, out var list))
-				_eventsByDay[day] = list = new();
+			if (!eventsByDay.TryGetValue(day, out var list))
+				eventsByDay[day] = list = new();
 
-			var label = $"{localStart:HH\\:mm}-{localEnd:HH\\:mm}, {a.GuestFirstName} {a.GuestLastName}";
+			var label = $"{localStart:HH:mm}-{localEnd:HH:mm}, {a.GuestFirstName} {a.GuestLastName}";
 			list.Add((TimeOnly.FromDateTime(localStart), label));
 		}
 
-		foreach (var list in _eventsByDay.Values)
+		foreach (var list in eventsByDay.Values)
 			list.Sort((a, b) => a.from.CompareTo(b.from));
+
+		_eventsByDay = eventsByDay;
 	}
 
 	private bool IsClickable(DateOnly day)
@@ -116,7 +118,6 @@ public partial class CalendarMonth
 	{
 		Month = Month.AddMonths(-1);
 		BuildWeeks();
-		await LoadEvents();
 		await OnMonthChanged.InvokeAsync(Month);
 	}
 
@@ -124,7 +125,6 @@ public partial class CalendarMonth
 	{
 		Month = Month.AddMonths(1);
 		BuildWeeks();
-		await LoadEvents();
 		await OnMonthChanged.InvokeAsync(Month);
 	}
 }

@@ -25,4 +25,9 @@ public partial class Calendar
 
 		_userId = userEmail;
 	}
+
+	private void OnMonthChanged(DateOnly month)
+	{
+		_month = month;
+	}
 }
