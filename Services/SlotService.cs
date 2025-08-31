@@ -49,11 +49,11 @@ public class SlotService
 				.ToListAsync();
 	}
 
-        public static bool IsWeekendOrHoliday(DateOnly d)
-        {
-                if (d.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday) return true;
-                return CzechHolidays.IsHoliday(d);
-        }
+	public static bool IsWeekendOrHoliday(DateOnly d)
+	{
+		if (d.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday) return true;
+		return CzechHolidays.IsHoliday(d);
+	}
 
 	public static bool IsWithinWindow(DateOnly d, DateOnly today) =>
 		d > today && d <= today.AddMonths(2);
