@@ -60,7 +60,7 @@ public partial class Schedule
 		if (_link is null) { _message = "Odkaz je neplatný."; return; }
 
 		_linkOwner = _link.OwnerUserId;
-		if (_linkOwner is null) { _message = "Kalendář nenalezen."; return; }		
+		if (_linkOwner is null) { _message = "Kalendář nenalezen."; return; }
 
 		if (!string.IsNullOrEmpty(_linkOwner))
 			_guser = await GoogleUsers.GetByEmailAsync(_linkOwner);
@@ -98,20 +98,19 @@ public partial class Schedule
 		await ReloadSlots();
 	}
 
-        private async Task ReloadSlots()
-        {
-                var dur = int.Parse(_duration);
+	private async Task ReloadSlots()
+	{
+		var dur = int.Parse(_duration);
 
-                _slots = await Slots.GetSlotsAsync(_link!.OwnerUserId, _selectedDay, TimeSpan.FromMinutes(dur), Today);
-                StateHasChanged();
-        }
+		_slots = await Slots.GetSlotsAsync(_link!.OwnerUserId, _selectedDay, TimeSpan.FromMinutes(dur), Today);
+		StateHasChanged();
+	}
 
-        private async Task OnMonthChanged()
-        {
-                if (_link is null) return;
-                _appointmentsCount = await Slots.CountAppointmentsInMonthAsync(_link.OwnerUserId, _currentMonth);
-                StateHasChanged();
-        }
+	private async Task OnMonthChanged(DateOnly month)
+	{
+		_currentMonth = month;
+		_appointmentsCount = await Slots.CountAppointmentsInMonthAsync(_link!.OwnerUserId, month);
+	}
 
 	private async Task Book()
 	{
@@ -124,8 +123,8 @@ public partial class Schedule
 
 		if (!ok)
 		{
-			_message = err; 
-			_showModal = false; 
+			_message = err;
+			_showModal = false;
 			return;
 		}
 
