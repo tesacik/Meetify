@@ -12,7 +12,7 @@
     <h2 class="mb-4">Počet schůzek v tomto měsíci: @_appointmentsCount</h2>
 
     <CalendarMonth Month="_currentMonth"
-                   OwnerUserId="_link.OwnerUserId"
+                   OwnerUserId="@_link.OwnerUserId"
                    IsPublicView="true"
                    OnDayClick="OpenDay" />
 }

@@ -69,11 +69,11 @@ public partial class CalendarMonth
 		await using var db = await DbFactory.CreateDbContextAsync();
 
 		var apps = await db.Appointments
-				.Where(a => a.OwnerUserId == OwnerUserId &&
-					a.StartUtc >= rangeStart.ToUniversalTime() &&
-					a.StartUtc < rangeEnd.ToUniversalTime())
-				.OrderBy(a => a.StartUtc)
-				.ToListAsync();
+			.Where(a => a.OwnerUserId == OwnerUserId &&
+				a.StartUtc >= rangeStart.ToUniversalTime() &&
+				a.StartUtc < rangeEnd.ToUniversalTime())
+			.OrderBy(a => a.StartUtc)
+			.ToListAsync();
 
 		foreach (var a in apps)
 		{
@@ -87,6 +87,10 @@ public partial class CalendarMonth
 			var label = $"{localStart:HH\\:mm}-{localEnd:HH\\:mm}, {a.GuestFirstName} {a.GuestLastName}";
 			list.Add((TimeOnly.FromDateTime(localStart), label));
 		}
+
+		foreach (var list in _eventsByDay.Values)
+			list.Sort((a, b) => a.from.CompareTo(b.from));
+		;
 	}
 
 	private bool IsClickable(DateOnly day)
