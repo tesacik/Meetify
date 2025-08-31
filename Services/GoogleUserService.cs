@@ -14,6 +14,7 @@ public class GoogleUserService
 	{
 		await using var db = await _dbFactory.CreateDbContextAsync();
 		var norm = Normalize(email);
+
 		return await db.GoogleUsers.AsNoTracking()
 				.FirstOrDefaultAsync(x => x.Email == norm, ct);
 	}

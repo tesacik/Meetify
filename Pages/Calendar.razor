@@ -1,13 +1,10 @@
 ﻿@page "/calendar"
-@using Microsoft.AspNetCore.Identity
+@using Meetify.Components
 @attribute [Authorize]
-@inject UserManager<IdentityUser> UserManager
-
 
 <h3>Můj kalendář</h3>
 
-
 @if (_userId is not null)
 {
-<CalendarMonth Month="_month" OwnerUserId="_userId" IsPublicView="false" />
+	<CalendarMonth Month="_month" OwnerUserId="_userId" IsPublicView="false" />
 }
