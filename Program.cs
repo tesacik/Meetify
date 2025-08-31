@@ -1,15 +1,9 @@
-using Meetify.Areas.Identity;
 using Meetify.Data;
 using Meetify.Services;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;
-using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Authorization;
-using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Identity.UI;
 using Microsoft.EntityFrameworkCore;
-using System;
 using System.Security.Claims;
 using System.Text;
 
@@ -31,7 +25,6 @@ builder.Services.AddControllers();
 
 builder.Services.AddScoped<SlotService>();
 builder.Services.AddScoped<GoogleUserService>();
-builder.Services.AddSingleton<WeatherForecastService>();
 
 // Auth
 builder.Services
