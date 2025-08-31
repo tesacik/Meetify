@@ -1,4 +1,5 @@
 ﻿@using Microsoft.AspNetCore.Identity
+@using Meetify.Services
 
 <div class="d-flex justify-content-between align-items-center mb-3">
     <div class="btn-group" role="group" aria-label="Month navigation">
@@ -39,7 +40,11 @@
                                 <small class="@($"text-muted {(muted ? "opacity-75" : "")}")">
                                     @day.Day.@day.Month.
                                 </small>
-                                @if (Services.SlotService.IsWeekendOrHoliday(day))
+                                @if (CzechHolidays.GetHolidayName(day) is string holiday)
+                                {
+                                    <span class="badge bg-secondary">@holiday</span>
+                                }
+                                else if (Services.SlotService.IsWeekendOrHoliday(day))
                                 {
                                     <span class="badge bg-secondary">volno</span>
                                 }
