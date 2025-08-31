@@ -32,6 +32,7 @@ public partial class CalendarMonth
 
 	protected override async Task OnParametersSetAsync()
 	{
+		Month = new DateOnly(Month.Year, Month.Month, 1);
 		BuildWeeks();
 		await LoadEvents();
 	}
@@ -63,7 +64,8 @@ public partial class CalendarMonth
 	{
 		_eventsByDay.Clear();
 
-		var rangeStart = Month.ToDateTime(new TimeOnly(0, 0), DateTimeKind.Local);
+		//var firstOfMonth = new DateOnly(Month.Year, Month.Month, 1);
+		var rangeStart = Month.ToDateTime(TimeOnly.MinValue, DateTimeKind.Local);
 		var rangeEnd = rangeStart.AddMonths(1);
 
 		await using var db = await DbFactory.CreateDbContextAsync();
@@ -90,7 +92,6 @@ public partial class CalendarMonth
 
 		foreach (var list in _eventsByDay.Values)
 			list.Sort((a, b) => a.from.CompareTo(b.from));
-		;
 	}
 
 	private bool IsClickable(DateOnly day)
