@@ -11,7 +11,8 @@
     <h1 class="mb-3">Sjednat schůzku s uživatelem @OwnerLabel()</h1>
     <h2 class="mb-4">Počet schůzek v tomto měsíci: @_appointmentsCount</h2>
 
-    <CalendarMonth Month="_currentMonth"
+    <CalendarMonth @bind-Month="_currentMonth"
+                   @bind-Month:after="OnMonthChanged"
                    OwnerUserId="@_link.OwnerUserId"
                    IsPublicView="true"
                    OnDayClick="OpenDay" />

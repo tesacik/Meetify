@@ -98,13 +98,20 @@ public partial class Schedule
 		await ReloadSlots();
 	}
 
-	private async Task ReloadSlots()
-	{
-		var dur = int.Parse(_duration);
+        private async Task ReloadSlots()
+        {
+                var dur = int.Parse(_duration);
 
-		_slots = await Slots.GetSlotsAsync(_link!.OwnerUserId, _selectedDay, TimeSpan.FromMinutes(dur), Today);
-		StateHasChanged();
-	}
+                _slots = await Slots.GetSlotsAsync(_link!.OwnerUserId, _selectedDay, TimeSpan.FromMinutes(dur), Today);
+                StateHasChanged();
+        }
+
+        private async Task OnMonthChanged()
+        {
+                if (_link is null) return;
+                _appointmentsCount = await Slots.CountAppointmentsInMonthAsync(_link.OwnerUserId, _currentMonth);
+                StateHasChanged();
+        }
 
 	private async Task Book()
 	{

@@ -8,9 +8,10 @@ namespace Meetify.Components;
 public partial class CalendarMonth
 {
 	[Parameter] public DateOnly Month { get; set; }
-	[Parameter] public string OwnerUserId { get; set; } = default!;
-	[Parameter] public bool IsPublicView { get; set; }
-	[Parameter] public EventCallback<DateOnly> OnDayClick { get; set; }
+        [Parameter] public string OwnerUserId { get; set; } = default!;
+        [Parameter] public bool IsPublicView { get; set; }
+        [Parameter] public EventCallback<DateOnly> OnDayClick { get; set; }
+        [Parameter] public EventCallback<DateOnly> MonthChanged { get; set; }
 
 	[Inject]
 	private NavigationManager Nav { get; set; } = default!;
@@ -111,19 +112,21 @@ public partial class CalendarMonth
 			await OnDayClick.InvokeAsync(day);
 	}
 
-	public async Task PrevMonth()
-	{
-		Month = Month.AddMonths(-1);
-		BuildWeeks();
-		await LoadEvents();
-		StateHasChanged();
-	}
+        public async Task PrevMonth()
+        {
+                Month = Month.AddMonths(-1);
+                BuildWeeks();
+                await LoadEvents();
+                await MonthChanged.InvokeAsync(Month);
+                StateHasChanged();
+        }
 
-	public async Task NextMonth()
-	{
-		Month = Month.AddMonths(1);
-		BuildWeeks();
-		await LoadEvents();
-		StateHasChanged();
-	}
+        public async Task NextMonth()
+        {
+                Month = Month.AddMonths(1);
+                BuildWeeks();
+                await LoadEvents();
+                await MonthChanged.InvokeAsync(Month);
+                StateHasChanged();
+        }
 }
