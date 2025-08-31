@@ -59,39 +59,43 @@ public partial class CalendarMonth
 		}
 	}
 
-	private async Task LoadEvents()
-	{
-		_eventsByDay.Clear();
+        private async Task LoadEvents()
+        {
+                _eventsByDay.Clear();
 
-		var rangeStart = Month.ToDateTime(new TimeOnly(0, 0), DateTimeKind.Local);
-		var rangeEnd = rangeStart.AddMonths(1);
+                // Prepare the month range in the application timezone (Central Europe)
+                var tz = TimeZoneInfo.FindSystemTimeZoneById("Central Europe Standard Time");
+                var rangeStartLocal = Month.ToDateTime(TimeOnly.MinValue, DateTimeKind.Unspecified);
+                var rangeEndLocal = rangeStartLocal.AddMonths(1);
+                var rangeStartUtc = TimeZoneInfo.ConvertTimeToUtc(rangeStartLocal, tz);
+                var rangeEndUtc = TimeZoneInfo.ConvertTimeToUtc(rangeEndLocal, tz);
 
-		await using var db = await DbFactory.CreateDbContextAsync();
+                await using var db = await DbFactory.CreateDbContextAsync();
 
-		var apps = await db.Appointments
-			.Where(a => a.OwnerUserId == OwnerUserId &&
-				a.StartUtc >= rangeStart.ToUniversalTime() &&
-				a.StartUtc < rangeEnd.ToUniversalTime())
-			.OrderBy(a => a.StartUtc)
-			.ToListAsync();
+                var apps = await db.Appointments
+                        .Where(a => a.OwnerUserId == OwnerUserId &&
+                                a.StartUtc >= rangeStartUtc &&
+                                a.StartUtc < rangeEndUtc)
+                        .OrderBy(a => a.StartUtc)
+                        .ToListAsync();
 
-		foreach (var a in apps)
-		{
-			var localStart = a.StartUtc.ToLocalTime();
-			var localEnd = a.EndUtc.ToLocalTime();
-			var day = DateOnly.FromDateTime(localStart);
+                foreach (var a in apps)
+                {
+                        var localStart = TimeZoneInfo.ConvertTimeFromUtc(a.StartUtc, tz);
+                        var localEnd = TimeZoneInfo.ConvertTimeFromUtc(a.EndUtc, tz);
+                        var day = DateOnly.FromDateTime(localStart);
 
-			if (!_eventsByDay.TryGetValue(day, out var list))
-				_eventsByDay[day] = list = new();
+                        if (!_eventsByDay.TryGetValue(day, out var list))
+                                _eventsByDay[day] = list = new();
 
-			var label = $"{localStart:HH\\:mm}-{localEnd:HH\\:mm}, {a.GuestFirstName} {a.GuestLastName}";
-			list.Add((TimeOnly.FromDateTime(localStart), label));
-		}
+                        var label = $"{localStart:HH\\:mm}-{localEnd:HH\\:mm}, {a.GuestFirstName} {a.GuestLastName}";
+                        list.Add((TimeOnly.FromDateTime(localStart), label));
+                }
 
-		foreach (var list in _eventsByDay.Values)
-			list.Sort((a, b) => a.from.CompareTo(b.from));
-		;
-	}
+                foreach (var list in _eventsByDay.Values)
+                        list.Sort((a, b) => a.from.CompareTo(b.from));
+                ;
+        }
 
 	private bool IsClickable(DateOnly day)
 	{
