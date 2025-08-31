@@ -49,14 +49,6 @@ public class SlotService
 				.ToListAsync();
 	}
 
-	public IEnumerable<TimeOnly> GenerateStartTimes(TimeSpan duration)
-	{
-		// krok = 15 minut (kvůli povinné pauze + variabilním délkám)
-		var step = TimeSpan.FromMinutes(15);
-		for (var t = DayStart; t + duration <= DayEnd; t += step)
-			yield return TimeOnly.FromTimeSpan(t);
-	}
-
 	public static bool IsWeekendOrHoliday(DateOnly d)
 	{
 		if (d.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday) return true;
@@ -89,31 +81,45 @@ public class SlotService
 		var list = new List<(TimeOnly, TimeOnly, bool, string)>();
 
 
-		if (!IsWithinWindow(day, today) || IsWeekendOrHoliday(day))
-		{
-			foreach (var start in GenerateStartTimes(duration))
-				list.Add((start, start.Add(duration), false, "nedostupné"));
-			return list;
-		}
+                if (!IsWithinWindow(day, today) || IsWeekendOrHoliday(day))
+                {
+                        var step = duration + TimeSpan.FromMinutes(15);
+                        for (var start = DayStart; ; start += step)
+                        {
+                                var end = start + duration;
+                                if (end > DayEnd)
+                                        break;
+                                var startTime = TimeOnly.FromTimeSpan(start);
+                                list.Add((startTime, TimeOnly.FromTimeSpan(end), false, "nedostupné"));
+                        }
+                        return list;
+                }
 
 		var existing = (await GetExistingForDayAsync(ownerUserId, day))
 				.Select(x => (s: x.startUtc, e: x.endUtc))
 				.ToList();
 		var dailyOk = RespectsDailyLimit(existing);
 
-		foreach (var start in GenerateStartTimes(duration))
-		{
-			var localStart = day.ToDateTime(start, DateTimeKind.Unspecified);
-			var localEnd = localStart.Add(duration);
-			var startUtc = TimeZoneInfo.ConvertTimeToUtc(localStart, _tz);
-			var endUtc = TimeZoneInfo.ConvertTimeToUtc(localEnd, _tz);
+                var slotStep = duration + TimeSpan.FromMinutes(15);
+                for (var start = DayStart; ; start += slotStep)
+                {
+                        var end = start + duration;
+                        if (end > DayEnd)
+                                break;
 
-			var available = dailyOk && FitsWithBuffer(startUtc, endUtc, existing);
-			var reason = available ? string.Empty : (dailyOk ? "obsazeno" : "limit překročen");
-			list.Add((start, start.Add(duration), available, string.IsNullOrEmpty(reason) ? "" : reason));
-		}
-		return list;
-	}
+                        var startTime = TimeOnly.FromTimeSpan(start);
+                        var endTime = TimeOnly.FromTimeSpan(end);
+                        var localStart = day.ToDateTime(startTime, DateTimeKind.Unspecified);
+                        var localEnd = localStart.Add(duration);
+                        var startUtc = TimeZoneInfo.ConvertTimeToUtc(localStart, _tz);
+                        var endUtc = TimeZoneInfo.ConvertTimeToUtc(localEnd, _tz);
+
+                        var available = dailyOk && FitsWithBuffer(startUtc, endUtc, existing);
+                        var reason = available ? string.Empty : (dailyOk ? "obsazeno" : "limit překročen");
+                        list.Add((startTime, endTime, available, string.IsNullOrEmpty(reason) ? "" : reason));
+                }
+                return list;
+        }
 
 	public async Task<(bool ok, string? error)> TryBookAsync(
 		string ownerUserId,
