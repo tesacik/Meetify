@@ -14,7 +14,7 @@ public partial class Schedule
 	private string? _linkOwner;
 	private int _appointmentsCount;
 
-	private DateOnly _currentMonth = DateOnly.FromDateTime(DateTime.Today);
+	private DateOnly _currentMonth = new DateOnly(DateTime.Now.Year, DateTime.Now.Month, 1);
 	private DateOnly Today => DateOnly.FromDateTime(DateTime.Today);
 
 	// modal state

@@ -21,7 +21,7 @@ public class SlotService
 	public async Task<int> CountAppointmentsInMonthAsync(string ownerUserId, DateOnly month)
 	{
 		await using var db = await _dbFactory.CreateDbContextAsync();
-		var start = month.ToDateTime(new(1, 0, 0), DateTimeKind.Unspecified);
+		var start = month.ToDateTime(TimeOnly.MinValue);
 		var end = start.AddMonths(1);
 		return await db.Appointments
 			.Where(a => a.OwnerUserId == ownerUserId && a.StartUtc >= start && a.StartUtc < end)
