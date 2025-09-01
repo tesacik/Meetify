@@ -1,11 +1,13 @@
-﻿using Meetify.Data;
+using Meetify.Data;
 using Meetify.Services;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.SignalR.Client;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 
 namespace Meetify.Components;
 
-public partial class CalendarMonth
+public partial class CalendarMonth : IAsyncDisposable
 {
 	private readonly string[] _dayNames =
 		new[] { "Po", "Út", "St", "Čt", "Pá", "So", "Ne" };
@@ -15,6 +17,7 @@ public partial class CalendarMonth
 
 	private List<List<DateOnly>> _weeks = new();
 	private Dictionary<DateOnly, List<(TimeOnly from, string text)>> _eventsByDay = new();
+	private HubConnection? _hubConnection;
 
 	[Parameter] public DateOnly Month { get; set; }
 	[Parameter] public string OwnerUserId { get; set; } = default!;
@@ -26,10 +29,37 @@ public partial class CalendarMonth
 	private NavigationManager Nav { get; set; } = default!;
 
 	[Inject]
+	private IHttpContextAccessor HttpContextAccessor { get; set; } = default!;
+
+	[Inject]
 	private IDbContextFactory<ApplicationDbContext> DbFactory { get; set; } = default!;
 
 	[Inject]
 	private Services.SlotService Slots { get; set; } = default!;
+
+	protected override async Task OnInitializedAsync()
+	{
+		if (!IsPublicView)
+		{
+			_hubConnection = new HubConnectionBuilder()
+					.WithUrl(Nav.ToAbsoluteUri("/hubs/appointments"), options =>
+					{
+						var cookie = HttpContextAccessor.HttpContext?.Request.Headers["Cookie"];
+						if (!string.IsNullOrEmpty(cookie))
+							options.Headers.Add("Cookie", cookie.ToString());
+					})
+					.WithAutomaticReconnect()
+					.Build();
+
+			_hubConnection.On<int>("AppointmentBooked", async _ =>
+			{
+				await LoadEvents();
+				await InvokeAsync(StateHasChanged);
+			});
+
+			await _hubConnection.StartAsync();
+		}
+	}
 
 	protected override async Task OnParametersSetAsync()
 	{
@@ -126,5 +156,11 @@ public partial class CalendarMonth
 		Month = Month.AddMonths(1);
 		BuildWeeks();
 		await OnMonthChanged.InvokeAsync(Month);
+	}
+
+	public async ValueTask DisposeAsync()
+	{
+		if (_hubConnection is not null)
+			await _hubConnection.DisposeAsync();
 	}
 }

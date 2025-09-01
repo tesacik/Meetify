@@ -1,8 +1,10 @@
 using Meetify.Data;
 using Meetify.Services;
+using Meetify.Hubs;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 using System.Text;
@@ -17,11 +19,14 @@ builder.Services.AddDbContextFactory<ApplicationDbContext>(opt =>
 	opt.UseSqlServer(connectionString));
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 builder.Services.AddDefaultIdentity<IdentityUser>(options => options.SignIn.RequireConfirmedAccount = true)
-    .AddEntityFrameworkStores<ApplicationDbContext>();
+	.AddEntityFrameworkStores<ApplicationDbContext>();
 
 builder.Services.AddRazorPages();
 builder.Services.AddServerSideBlazor();
 builder.Services.AddControllers();
+builder.Services.AddSignalR();
+builder.Services.AddSingleton<IUserIdProvider, EmailUserIdProvider>();
+builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddScoped<SlotService>();
 builder.Services.AddScoped<GoogleUserService>();
@@ -69,13 +74,13 @@ var app = builder.Build();
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
-    app.UseMigrationsEndPoint();
+	app.UseMigrationsEndPoint();
 }
 else
 {
-    app.UseExceptionHandler("/Error");
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
-    app.UseHsts();
+	app.UseExceptionHandler("/Error");
+	// The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
+	app.UseHsts();
 }
 
 app.UseHttpsRedirection();
@@ -86,6 +91,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapHub<AppointmentHub>("/hubs/appointments");
 app.MapBlazorHub();
 app.MapFallbackToPage("/_Host");
 
@@ -100,8 +106,8 @@ app.MapGet("/diag-id", (IConfiguration cfg) =>
 	var cid = cfg["Authentication:Google:ClientId"] ?? "(null)";
 	var sec = cfg["Authentication:Google:ClientSecret"] ?? "(null)";
 	// mask middle for safety
-	var maskedCid = cid.Length > 10 ? $"{cid[..6]}…{cid[^6..]}" : cid;
-	var maskedSecret = cid.Length > 10 ? $"{sec[..6]}…{sec[^6..]}" : sec;
+	var maskedCid = cid.Length > 10 ? $"{cid[..6]}â€¦{cid[^6..]}" : cid;
+	var maskedSecret = cid.Length > 10 ? $"{sec[..6]}â€¦{sec[^6..]}" : sec;
 
 	var sb = new StringBuilder();
 	sb.AppendLine($"Google ClientId in use: {maskedCid}");
