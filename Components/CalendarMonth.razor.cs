@@ -2,6 +2,7 @@ using Meetify.Data;
 using Meetify.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.SignalR.Client;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 
 namespace Meetify.Components;
@@ -24,8 +25,11 @@ public partial class CalendarMonth : IAsyncDisposable
 	[Parameter] public EventCallback<DateOnly> OnDayClick { get; set; }
 	[Parameter] public EventCallback<DateOnly> OnMonthChanged { get; set; }
 
-	[Inject]
-	private NavigationManager Nav { get; set; } = default!;
+        [Inject]
+        private NavigationManager Nav { get; set; } = default!;
+
+        [Inject]
+        private IHttpContextAccessor HttpContextAccessor { get; set; } = default!;
 
 	[Inject]
 	private IDbContextFactory<ApplicationDbContext> DbFactory { get; set; } = default!;
@@ -38,7 +42,12 @@ public partial class CalendarMonth : IAsyncDisposable
                 if (!IsPublicView)
                 {
                         _hubConnection = new HubConnectionBuilder()
-                                .WithUrl(Nav.ToAbsoluteUri("/hubs/appointments"))
+                                .WithUrl(Nav.ToAbsoluteUri("/hubs/appointments"), options =>
+                                {
+                                        var cookie = HttpContextAccessor.HttpContext?.Request.Headers["Cookie"];
+                                        if (!string.IsNullOrEmpty(cookie))
+                                                options.Headers.Add("Cookie", cookie.ToString());
+                                })
                                 .WithAutomaticReconnect()
                                 .Build();
 
