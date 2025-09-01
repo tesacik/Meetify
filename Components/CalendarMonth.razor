@@ -32,7 +32,7 @@
                         var clickable = IsClickable(day);
                         var muted = !isCurrentMonth;
 
-                        <td class="@($"p-2 {(!isCurrentMonth ? "bg-light" : "")}")"
+                        <td class="@($"p-2 {(!isCurrentMonth ? "outside-month" : "")}")"
                             style="height: 110px; vertical-align: top; cursor:@(clickable ? "pointer" : "default")"
                             @onclick="(() => OnDayClickInternal(day))">
 
