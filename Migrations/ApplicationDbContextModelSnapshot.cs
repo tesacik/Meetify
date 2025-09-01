@@ -51,6 +51,9 @@ namespace Meetify.Migrations
                     b.Property<DateTime>("StartUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<Guid>("ShareLinkId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.HasKey("Id");
 
                     b.HasIndex("OwnerUserId", "StartUtc")

@@ -57,9 +57,18 @@
                                     {
                                         if (IsPublicView)
                                         {
-                                            <span class="badge bg-secondary w-100 text-truncate d-block" title="Obsazeno">
-                                                Obsazeno
-                                            </span>
+                                            if (ev.isCurrent)
+                                            {
+                                                <span class="badge bg-primary w-100 text-truncate d-block" title="@($"Vaše schůzka s {OwnerLabel}")">
+                                                    Vaše schůzka s @OwnerLabel
+                                                </span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-secondary w-100 text-truncate d-block" title="Obsazeno">
+                                                    Obsazeno
+                                                </span>
+                                            }
                                         }
                                         else
                                         {

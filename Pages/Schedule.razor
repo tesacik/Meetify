@@ -14,7 +14,9 @@
     <CalendarMonth Month="_currentMonth"
                    OwnerUserId="@_link.OwnerUserId"
                    IsPublicView="true"
-                   OnDayClick="OpenDay" 
+                   CurrentShareLinkId="@_link.Id"
+                   OwnerLabel="@OwnerLabel()"
+                   OnDayClick="OpenDay"
                    OnMonthChanged="OnMonthChanged"/>
 }
 

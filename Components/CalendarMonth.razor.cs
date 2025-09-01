@@ -16,14 +16,16 @@ public partial class CalendarMonth : IAsyncDisposable
 		System.Globalization.CultureInfo.GetCultureInfo("cs-CZ");
 
 	private List<List<DateOnly>> _weeks = new();
-	private Dictionary<DateOnly, List<(TimeOnly from, string text)>> _eventsByDay = new();
+        private Dictionary<DateOnly, List<(TimeOnly from, string text, bool isCurrent)>> _eventsByDay = new();
 	private HubConnection? _hubConnection;
 
 	[Parameter] public DateOnly Month { get; set; }
 	[Parameter] public string OwnerUserId { get; set; } = default!;
-	[Parameter] public bool IsPublicView { get; set; }
-	[Parameter] public EventCallback<DateOnly> OnDayClick { get; set; }
-	[Parameter] public EventCallback<DateOnly> OnMonthChanged { get; set; }
+        [Parameter] public bool IsPublicView { get; set; }
+        [Parameter] public Guid? CurrentShareLinkId { get; set; }
+        [Parameter] public string? OwnerLabel { get; set; }
+        [Parameter] public EventCallback<DateOnly> OnDayClick { get; set; }
+        [Parameter] public EventCallback<DateOnly> OnMonthChanged { get; set; }
 
 	[Inject]
 	private NavigationManager Nav { get; set; } = default!;
@@ -91,9 +93,9 @@ public partial class CalendarMonth : IAsyncDisposable
 		}
 	}
 
-	private async Task LoadEvents()
-	{
-		Dictionary<DateOnly, List<(TimeOnly from, string text)>> eventsByDay = new();
+        private async Task LoadEvents()
+        {
+                Dictionary<DateOnly, List<(TimeOnly from, string text, bool isCurrent)>> eventsByDay = new();
 
 		//var firstOfMonth = new DateOnly(Month.Year, Month.Month, 1);
 		var rangeStart = Month.ToDateTime(TimeOnly.MinValue, DateTimeKind.Local);
@@ -101,28 +103,29 @@ public partial class CalendarMonth : IAsyncDisposable
 
 		await using var db = await DbFactory.CreateDbContextAsync();
 
-		var apps = await db.Appointments
-			.Where(a => a.OwnerUserId == OwnerUserId &&
-				a.StartUtc >= rangeStart.ToUniversalTime() &&
-				a.StartUtc < rangeEnd.ToUniversalTime())
-			.OrderBy(a => a.StartUtc)
-			.ToListAsync();
+                var apps = await db.Appointments
+                        .Where(a => a.OwnerUserId == OwnerUserId &&
+                                a.StartUtc >= rangeStart.ToUniversalTime() &&
+                                a.StartUtc < rangeEnd.ToUniversalTime())
+                        .OrderBy(a => a.StartUtc)
+                        .ToListAsync();
 
-		foreach (var a in apps)
-		{
-			var localStart = a.StartUtc.ToLocalTime();
-			var localEnd = a.EndUtc.ToLocalTime();
-			var day = DateOnly.FromDateTime(localStart);
+                foreach (var a in apps)
+                {
+                        var localStart = a.StartUtc.ToLocalTime();
+                        var localEnd = a.EndUtc.ToLocalTime();
+                        var day = DateOnly.FromDateTime(localStart);
 
-			if (!eventsByDay.TryGetValue(day, out var list))
-				eventsByDay[day] = list = new();
+                        if (!eventsByDay.TryGetValue(day, out var list))
+                                eventsByDay[day] = list = new();
 
-			var label = $"{localStart:HH:mm}-{localEnd:HH:mm}, {a.GuestFirstName} {a.GuestLastName}";
-			list.Add((TimeOnly.FromDateTime(localStart), label));
-		}
+                        var label = $"{localStart:HH:mm}-{localEnd:HH:mm}, {a.GuestFirstName} {a.GuestLastName}";
+                        var isCurrent = CurrentShareLinkId.HasValue && a.ShareLinkId == CurrentShareLinkId.Value;
+                        list.Add((TimeOnly.FromDateTime(localStart), label, isCurrent));
+                }
 
-		foreach (var list in eventsByDay.Values)
-			list.Sort((a, b) => a.from.CompareTo(b.from));
+                foreach (var list in eventsByDay.Values)
+                        list.Sort((a, b) => a.from.CompareTo(b.from));
 
 		_eventsByDay = eventsByDay;
 	}

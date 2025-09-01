@@ -158,14 +158,15 @@ public class SlotService
 		if (!FitsWithBuffer(startUtc, endUtc, existing.Select(x => (x.startUtc, x.endUtc))))
 			return (false, "Termín koliduje s jinou schůzkou nebo povinnou pauzou.");
 
-		var appointment = new Appointment
-		{
-			OwnerUserId = ownerUserId,
-			StartUtc = startUtc,
-			EndUtc = endUtc,
-			GuestFirstName = guestFirst.Trim(),
-			GuestLastName = guestLast.Trim()
-		};
+                var appointment = new Appointment
+                {
+                        OwnerUserId = ownerUserId,
+                        StartUtc = startUtc,
+                        EndUtc = endUtc,
+                        GuestFirstName = guestFirst.Trim(),
+                        GuestLastName = guestLast.Trim(),
+                        ShareLinkId = linkId
+                };
 		db.Appointments.Add(appointment);
 
 		// zamknout odkaz (lze rezervovat pouze jednu schůzku tímto linkem)
