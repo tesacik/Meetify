@@ -1,0 +1,11 @@
+.calendar {
+    table-layout: fixed;
+    width: 100%;
+    background-color: red;
+}
+
+.calendar td {
+    width: calc(100% / 7); /* 7 days */
+    overflow: hidden;
+}
+
