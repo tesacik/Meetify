@@ -5,10 +5,10 @@ namespace Meetify.Services;
 
 public class EmailUserIdProvider : IUserIdProvider
 {
-    public string? GetUserId(HubConnectionContext connection)
-    {
-        return connection.User?.FindFirst(ClaimTypes.Email)?.Value
-            ?? connection.User?.FindFirst("email")?.Value;
-    }
+	public string? GetUserId(HubConnectionContext connection)
+	{
+		return connection.User?.FindFirst(ClaimTypes.Email)?.Value
+			?? connection.User?.FindFirst("email")?.Value;
+	}
 }
 
