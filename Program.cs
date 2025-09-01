@@ -1,5 +1,6 @@
 using Meetify.Data;
 using Meetify.Services;
+using Meetify.Hubs;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Identity;
@@ -22,6 +23,7 @@ builder.Services.AddDefaultIdentity<IdentityUser>(options => options.SignIn.Requ
 builder.Services.AddRazorPages();
 builder.Services.AddServerSideBlazor();
 builder.Services.AddControllers();
+builder.Services.AddSignalR();
 
 builder.Services.AddScoped<SlotService>();
 builder.Services.AddScoped<GoogleUserService>();
@@ -86,6 +88,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapHub<AppointmentHub>("/hubs/appointments");
 app.MapBlazorHub();
 app.MapFallbackToPage("/_Host");
 
@@ -100,8 +103,8 @@ app.MapGet("/diag-id", (IConfiguration cfg) =>
 	var cid = cfg["Authentication:Google:ClientId"] ?? "(null)";
 	var sec = cfg["Authentication:Google:ClientSecret"] ?? "(null)";
 	// mask middle for safety
-	var maskedCid = cid.Length > 10 ? $"{cid[..6]}…{cid[^6..]}" : cid;
-	var maskedSecret = cid.Length > 10 ? $"{sec[..6]}…{sec[^6..]}" : sec;
+	var maskedCid = cid.Length > 10 ? $"{cid[..6]}â€¦{cid[^6..]}" : cid;
+	var maskedSecret = cid.Length > 10 ? $"{sec[..6]}â€¦{sec[^6..]}" : sec;
 
 	var sb = new StringBuilder();
 	sb.AppendLine($"Google ClientId in use: {maskedCid}");

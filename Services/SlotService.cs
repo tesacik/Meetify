@@ -1,19 +1,24 @@
-﻿using Meetify.Data;
+using Meetify.Data;
 using Meetify.Domain;
+using Meetify.Hubs;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 
 namespace Meetify.Services;
 
 public class SlotService
 {
-	private readonly IDbContextFactory<ApplicationDbContext> _dbFactory;
-	private readonly TimeZoneInfo _tz; // Europe/Prague
+        private readonly IDbContextFactory<ApplicationDbContext> _dbFactory;
+        private readonly IHubContext<AppointmentHub> _hubContext;
+        private readonly TimeZoneInfo _tz; // Europe/Prague
 
-	public SlotService(IDbContextFactory<ApplicationDbContext> dbFactory)
-	{
-		_dbFactory = dbFactory;
-		_tz = TimeZoneInfo.FindSystemTimeZoneById("Central Europe Standard Time"); // Windows ID pro Prahu
-	}
+        public SlotService(IDbContextFactory<ApplicationDbContext> dbFactory,
+                IHubContext<AppointmentHub> hubContext)
+        {
+                _dbFactory = dbFactory;
+                _hubContext = hubContext;
+                _tz = TimeZoneInfo.FindSystemTimeZoneById("Central Europe Standard Time"); // Windows ID pro Prahu
+        }
 
 	public static readonly TimeSpan DayStart = new(9, 0, 0);
 	public static readonly TimeSpan DayEnd = new(16, 0, 0);
@@ -153,24 +158,26 @@ public class SlotService
 		if (!FitsWithBuffer(startUtc, endUtc, existing.Select(x => (x.startUtc, x.endUtc))))
 			return (false, "Termín koliduje s jinou schůzkou nebo povinnou pauzou.");
 
-		db.Appointments.Add(new Appointment
-		{
-			OwnerUserId = ownerUserId,
-			StartUtc = startUtc,
-			EndUtc = endUtc,
-			GuestFirstName = guestFirst.Trim(),
-			GuestLastName = guestLast.Trim()
-		});
+                var appointment = new Appointment
+                {
+                        OwnerUserId = ownerUserId,
+                        StartUtc = startUtc,
+                        EndUtc = endUtc,
+                        GuestFirstName = guestFirst.Trim(),
+                        GuestLastName = guestLast.Trim()
+                };
+                db.Appointments.Add(appointment);
 
 		// zamknout odkaz (lze rezervovat pouze jednu schůzku tímto linkem)
 		link.IsUsed = true;
 
 		try
 		{
-			await db.SaveChangesAsync();
-			await tx.CommitAsync();
-			return (true, null);
-		}
+                        await db.SaveChangesAsync();
+                        await tx.CommitAsync();
+                        await _hubContext.Clients.User(ownerUserId).SendAsync("AppointmentBooked", appointment.Id);
+                        return (true, null);
+                }
 		catch (DbUpdateException)
 		{
 			await tx.RollbackAsync();

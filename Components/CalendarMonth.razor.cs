@@ -1,11 +1,12 @@
-﻿using Meetify.Data;
+using Meetify.Data;
 using Meetify.Services;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.EntityFrameworkCore;
 
 namespace Meetify.Components;
 
-public partial class CalendarMonth
+public partial class CalendarMonth : IAsyncDisposable
 {
 	private readonly string[] _dayNames =
 		new[] { "Po", "Út", "St", "Čt", "Pá", "So", "Ne" };
@@ -13,8 +14,9 @@ public partial class CalendarMonth
 	private readonly System.Globalization.CultureInfo _csCulture =
 		System.Globalization.CultureInfo.GetCultureInfo("cs-CZ");
 
-	private List<List<DateOnly>> _weeks = new();
-	private Dictionary<DateOnly, List<(TimeOnly from, string text)>> _eventsByDay = new();
+        private List<List<DateOnly>> _weeks = new();
+        private Dictionary<DateOnly, List<(TimeOnly from, string text)>> _eventsByDay = new();
+        private HubConnection? _hubConnection;
 
 	[Parameter] public DateOnly Month { get; set; }
 	[Parameter] public string OwnerUserId { get; set; } = default!;
@@ -28,8 +30,27 @@ public partial class CalendarMonth
 	[Inject]
 	private IDbContextFactory<ApplicationDbContext> DbFactory { get; set; } = default!;
 
-	[Inject]
-	private Services.SlotService Slots { get; set; } = default!;
+        [Inject]
+        private Services.SlotService Slots { get; set; } = default!;
+
+        protected override async Task OnInitializedAsync()
+        {
+                if (!IsPublicView)
+                {
+                        _hubConnection = new HubConnectionBuilder()
+                                .WithUrl(Nav.ToAbsoluteUri("/hubs/appointments"))
+                                .WithAutomaticReconnect()
+                                .Build();
+
+                        _hubConnection.On<int>("AppointmentBooked", async _ =>
+                        {
+                                await LoadEvents();
+                                await InvokeAsync(StateHasChanged);
+                        });
+
+                        await _hubConnection.StartAsync();
+                }
+        }
 
 	protected override async Task OnParametersSetAsync()
 	{
@@ -121,10 +142,16 @@ public partial class CalendarMonth
 		await OnMonthChanged.InvokeAsync(Month);
 	}
 
-	public async Task NextMonth()
-	{
-		Month = Month.AddMonths(1);
-		BuildWeeks();
-		await OnMonthChanged.InvokeAsync(Month);
-	}
+        public async Task NextMonth()
+        {
+                Month = Month.AddMonths(1);
+                BuildWeeks();
+                await OnMonthChanged.InvokeAsync(Month);
+        }
+
+        public async ValueTask DisposeAsync()
+        {
+                if (_hubConnection is not null)
+                        await _hubConnection.DisposeAsync();
+        }
 }
