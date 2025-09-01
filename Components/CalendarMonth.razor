@@ -42,7 +42,7 @@
                                 </small>
                                 @if (CzechHolidays.GetHolidayName(day) is string holiday)
                                 {
-                                    <span class="badge bg-secondary">@holiday</span>
+                                    <span class="badge bg-secondary" title="@holiday">@holiday</span>
                                 }
                                 else if (Services.SlotService.IsWeekendOrHoliday(day))
                                 {
